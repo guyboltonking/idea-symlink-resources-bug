@@ -1,0 +1,36 @@
+// IntelliJ IDEA handles inter-project dependencies by transitively including
+// all the dependent project's dependencies in the depending project.  This
+// immediately causes a problem for us, because we want depending projects
+// to just pull in the shadow jar this project produces, not all its
+// dependencies; doing the latter bypasses the shading and breaks everything!
+//
+// When IntelliJ IDEA imports a project it uses the idea plugin
+// settings. We take advantage of both that, and the fact
+// that it always defines the idea.version system property,
+// to customize the generation of the IDEA module as follows:
+//
+//   * We make the shadow configuration have one literal file
+//     dependency, which is the same as the artifact it produces
+//     i.e. the shaded jar (this circularity doesn't matter,
+//     since the idea plugin doesn't care about artifacts).
+//
+//   * We then force all the dependencies of the scopes of
+//     the generated IDEA module to be shadow, and thus just the
+//     shaded jar.
+//
+// With these changes, when IDEA pulls in the transitive
+// dependencies of the project, it will only get the shaded jar.
+
+if (System.getProperty('idea.version')) {
+    dependencies {
+        shadow files(configurations.shadow.artifacts[0].file)
+    }
+
+    idea {
+        module {
+            scopes.each {
+                it.value.plus = [configurations.shadow]
+            }
+        }
+    }
+}
